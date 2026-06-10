@@ -9,7 +9,6 @@ import time
 import smtplib
 from email.message import EmailMessage
 from email.utils import formataddr
-from dotenv import load_dotenv
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -18,19 +17,26 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
-# --------------------------------------------------
-# Load .env
-# --------------------------------------------------
+def get_config_value(key, default="", section="smtp"):
+    try:
+        if section and section in st.secrets and key in st.secrets[section]:
+            return st.secrets[section][key]
+    except Exception:
+        pass
 
-load_dotenv()
+    try:
+        return st.secrets.get(key, default)
+    except Exception:
+        return os.getenv(key, default)
 
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_EMAIL = os.getenv("SMTP_EMAIL", "")
-SMTP_APP_PASSWORD = os.getenv("SMTP_APP_PASSWORD", "")
-FROM_NAME = os.getenv("FROM_NAME", "NIAT Team")
-REPLY_TO = os.getenv("REPLY_TO", "")
-EMAIL_DELAY_SECONDS = int(os.getenv("EMAIL_DELAY_SECONDS", "2"))
+
+SMTP_HOST = get_config_value("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(get_config_value("SMTP_PORT", "587"))
+SMTP_EMAIL = get_config_value("SMTP_EMAIL", "")
+SMTP_APP_PASSWORD = get_config_value("SMTP_APP_PASSWORD", "")
+FROM_NAME = get_config_value("FROM_NAME", "NIAT Team")
+REPLY_TO = get_config_value("REPLY_TO", "")
+EMAIL_DELAY_SECONDS = int(get_config_value("EMAIL_DELAY_SECONDS", "2"))
 
 
 # --------------------------------------------------
@@ -401,7 +407,9 @@ def send_emails_with_smtp(records, skip_duplicates=True):
     results = []
 
     if not SMTP_EMAIL or not SMTP_APP_PASSWORD:
-        raise Exception("SMTP_EMAIL or SMTP_APP_PASSWORD is missing in .env file.")
+        raise Exception(
+            "SMTP_EMAIL or SMTP_APP_PASSWORD is missing. Set Streamlit secrets or environment variables."
+        )
 
     sent_keys = set()
 
@@ -539,7 +547,7 @@ with smtp_col3:
     if SMTP_EMAIL and SMTP_APP_PASSWORD:
         st.success("SMTP configured")
     else:
-        st.error("SMTP not configured. Check .env file.")
+        st.error("SMTP not configured. Set Streamlit secrets or environment variables.")
 
 
 st.divider()
